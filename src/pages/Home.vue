@@ -1,6 +1,73 @@
 <script setup>
+import { onMounted, ref, watch, reactive } from 'vue'
+import axios from 'axios'
 import CardList from '../components/CardList.vue'
 import Header from '../components/Header.vue'
+import { BASE_URL } from '../utils/variables'
+
+const items = ref([])
+
+const filters = reactive({
+  sortBy: 'nameRU',
+  searchQuery: ''
+})
+
+const onChangeSelect = (e) => {
+  console.log(e.target.value)
+  filters.sortBy = e.target.value
+}
+
+const onChangeSearchInput = (e) => {
+  console.log(e.target.value)
+  filters.searchQuery = e.target.value
+}
+
+const fetchFavorites = async () => {
+  try {
+    const { data: favorites } = await axios.get(`${BASE_URL}/favorites`)
+    items.value = items.value.map((item) => {
+      const favorite = favorites.find((favorite) => favorite.parentId === item.id)
+      if (!favorite) {
+        return item
+      }
+      return {
+        ...item,
+        isLiked: true,
+        parentId: favorite.parentId
+      }
+    })
+    console.log(items.value)
+  } catch (err) {
+    console.log(err)
+  }
+}
+
+const fetchItems = async () => {
+  try {
+    const params = {
+      sortBy: filters.sortBy
+    }
+
+    if (filters.searchQuery) {
+      params.nameRU = `*${filters.searchQuery}*`
+    }
+
+    const { data } = await axios.get(`${BASE_URL}/items`, { params })
+
+    items.value = data.map((obj) => ({
+      ...obj,
+      isLiked: false
+    }))
+  } catch (err) {
+    console.log(err)
+  }
+}
+
+onMounted(async () => {
+  await fetchItems()
+  await fetchFavorites()
+})
+watch(filters, fetchItems)
 </script>
 
 <template>
@@ -13,13 +80,15 @@ import Header from '../components/Header.vue'
         <div class="flex flex-wrap items-center gap-4">
           <select
             class="py-2 px-3 border border-gray-200 focus:border-gray-400 rounded-md focus:outline-none"
+            @change="onChangeSelect"
           >
-            <option value="name">По названию</option>
-            <option value="price">По рейтингу (высокий)</option>
-            <option value="price">По рейтингу (низкий)</option>
+            <option value="nameRU">По названию</option>
+            <option value="-rating">По рейтингу (высокий)</option>
+            <option value="rating">По рейтингу (низкий)</option>
           </select>
           <div class="relative">
             <input
+              @input="onChangeSearchInput"
               type="text"
               class="border border-gray-200 rounded-md py-2 pl-10 pr-4 focus:outline-none focus:border-gray-400"
               placeholder="Поиск..."
@@ -30,7 +99,7 @@ import Header from '../components/Header.vue'
           </div>
         </div>
       </div>
-      <CardList />
+      <CardList :items="items" />
     </div>
   </div>
 </template>
