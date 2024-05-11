@@ -25,7 +25,7 @@ const fetchFavorites = async () => {
   try {
     const { data: favorites } = await axios.get(`${BASE_URL}/favorites`)
     items.value = items.value.map((item) => {
-      const favorite = favorites.find((favorite) => favorite.parentId === item.id)
+      const favorite = favorites.find((favorite) => favorite.item_id === item.id)
       if (!favorite) {
         return item
       }
@@ -44,7 +44,7 @@ const addToFavorite = async (item) => {
   try {
     if (!item.isLiked) {
       const obj = {
-        parentId: item.id
+        item_id: item.id
       }
 
       const { data } = await axios.post(`${BASE_URL}/favorites`, obj)
